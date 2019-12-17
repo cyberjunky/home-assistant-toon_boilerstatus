@@ -1,0 +1,8 @@
+{
+  "domain": "toon_boilerstatus",
+  "name": "TOON Boiler Status",
+  "documentation": "https://github.com/cyberjunky/home-assistant-toon_boilerstatus",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@cyberjunky"]
+}
