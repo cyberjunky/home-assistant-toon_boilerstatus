@@ -16,6 +16,13 @@ You also need to install ToonStore and the BoilerStatus app, you can find inform
 
 ### Installation
 
+## HACS - Recommended
+- Have [HACS](https://hacs.xyz) installed, this will allow you to easily update.
+- Add `https://github.com/cyberjunky/home-assistant-toon_boilerstatus` as a [custom repository](https://hacs.xyz/docs/navigation/repository) with Type: Integration
+- Click Install under "TOON Boiler Status" integration.
+- Restart Home-Assistant.
+
+## Manual
 - Copy directory `custom_components/toon_boilerstatus` to your `<config dir>/custom_components` directory.
 - Configure with config below.
 - Restart Home-Assistant.
