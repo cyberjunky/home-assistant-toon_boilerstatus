@@ -1,10 +1,7 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
 # TOON Boiler Status Sensor Component
-This component reads and displays the boiler status values from a rooted TOON thermostat.
-
-## Home-Assistant Custom Component
-This is a Custom Component for Home-Assistant (https://home-assistant.io)
+This is a Custom Component for Home-Assistant (https://home-assistant.io) that reads and displays the boiler status values from a rooted TOON thermostat.
 
 NOTE: This component only works with rooted TOON devices.
 TOON thermostats are available in The Netherlands and Belgium.
@@ -18,8 +15,8 @@ You also need to install ToonStore and the BoilerStatus app, you can find inform
 
 ### Installation
 
-- Copy directory `custom_components/toon_boilerstatus` to your `<config dir>/custom_components` directory.
-- Configure with config below.
+- Install this integration using HACS.
+- Configure using configuration instructions below.
 - Restart Home-Assistant.
 
 {% endif %}
@@ -72,9 +69,6 @@ Boiler Status:
 ### Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/blob/master/screenshots/toon-boilerstatus.png?raw=true "Screenshot TOON Boiler Status")
-
-### Changes
-* first release for hacs
 
 ### Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
