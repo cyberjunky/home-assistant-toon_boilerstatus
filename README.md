@@ -25,7 +25,7 @@ You also need to install ToonStore and the BoilerStatus app, you can find inform
 - Configure with config below.
 - Restart Home-Assistant.
 
-### Usage
+## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
@@ -70,9 +70,9 @@ Boiler Status:
   - sensor.toon_room_temp_setpoint
 ```
 
-### Screenshots
+## Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/blob/master/screenshots/toon-boilerstatus.png?raw=true "Screenshot TOON Boiler Status")
 
-### Donation
+## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
