@@ -11,16 +11,6 @@ More information about rooting your TOON can be found here:
 
 You also need to install ToonStore and the BoilerStatus app, you can find information on how to install these on forum mentioned above.
 
-{% if not installed %}
-
-## Installation
-
-- Install this integration using HACS.
-- Configure using configuration instructions below.
-- Restart Home-Assistant.
-
-{% endif %}
-
 ## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
