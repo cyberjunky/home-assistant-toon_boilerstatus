@@ -1,6 +1,6 @@
 """
-Support for reading Opentherm boiler status data using TOON thermostat's ketelmodule.
-Only works for rooted TOON.
+Support for reading Opentherm boiler status data using Toon thermostat's ketelmodule.
+Only works for rooted Toon.
 
 configuration.yaml
 
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
-SENSOR_PREFIX = 'TOON '
+SENSOR_PREFIX = 'Toon '
 SENSOR_TYPES = {
     'boilersetpoint': ['Boiler SetPoint', '°C', 'mdi:thermometer'],
     'boilerintemp': ['Boiler InTemp', '°C', 'mdi:thermometer'],
@@ -58,7 +58,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Setup the TOON boilerstatus sensors."""
+    """Setup the Toon boilerstatus sensors."""
 
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
@@ -73,7 +73,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         unit = SENSOR_TYPES[resource][1]
         icon = SENSOR_TYPES[resource][2]
 
-        _LOGGER.debug("Adding TOON Boiler Status sensor: {}, {}, {}, {}".format(name, sensor_type, unit, icon))
+        _LOGGER.debug("Adding Toon Boiler Status sensor: {}, {}, {}, {}".format(name, sensor_type, unit, icon))
         entities.append(ToonBoilerStatusSensor(toondata, name, sensor_type, unit, icon))
 
     async_add_entities(entities, True)
@@ -81,10 +81,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 # pylint: disable=abstract-method
 class ToonBoilerStatusData(object):
-    """Handle TOON object and limit updates."""
-
+    """Handle Toon object and limit updates."""
     def __init__(self, hass, host, port):
         """Initialize the data object."""
+
         self._hass = hass
         self._host = host
         self._port = port
@@ -94,22 +94,29 @@ class ToonBoilerStatusData(object):
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
+        """Download and update data from Toon."""
 
         try:
             websession = async_get_clientsession(self._hass)
-            with async_timeout.timeout(10):
+            with async_timeout.timeout(5):
                 response = await websession.get(self._url)
             _LOGGER.debug(
-                "Response status from TOON: %s", response.status
-            )
-            self._data = await response.json(content_type='text/plain')
-            _LOGGER.debug("Data received from TOON: %s", self._data)
-        except (asyncio.TimeoutError, aiohttp.ClientError):
-            _LOGGER.error("Cannot connect to TOON thermostat")
+                "Response status from Toon: %s", response.status
+            ) 
+        except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+            _LOGGER.error("Cannot connect to Toon: %s", err)
             self._data = None
             return
-        except (Exception) as err:
-            _LOGGER.error("Error downloading from TOON thermostat: %s", err)
+        except Exception as err:
+            _LOGGER.error("Error downloading from Toon: %s", err)
+            self._data = None
+            return
+
+        try:
+            self._data = await response.json(content_type='text/plain')
+            _LOGGER.debug("Data received from Toon: %s", self._data)
+        except Exception as err:
+            _LOGGER.error("Cannot parse data from Toon: %s", err)
             self._data = None
             return
 
@@ -120,7 +127,7 @@ class ToonBoilerStatusData(object):
 
 
 class ToonBoilerStatusSensor(Entity):
-    """Representation of a TOON Boilerstatus sensor."""
+    """Representation of a Toon Boilerstatus sensor."""
 
     def __init__(self, toondata, name, sensor_type, unit, icon):
         """Initialize the sensor."""
