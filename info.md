@@ -1,13 +1,13 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
-# TOON Boiler Status Sensor Component
-This is a Custom Component for Home-Assistant (https://home-assistant.io) that reads and displays the boiler status values from a rooted TOON thermostat.
+# Toon Boiler Status Sensor Component
+This is a Custom Component for Home-Assistant (https://home-assistant.io) that reads and displays the boiler status values from a rooted Toon thermostat.
 
-NOTE: This component only works with rooted TOON devices.
+NOTE: This component only works with rooted Toon devices.
 TOON thermostats are available in The Netherlands and Belgium.
 
-More information about rooting your TOON can be found here:
-[Eneco TOON as Domotica controller](http://www.domoticaforum.eu/viewforum.php?f=87)
+More information about rooting your Toon can be found here:
+[Eneco Toon as Domotica controller](http://www.domoticaforum.eu/viewforum.php?f=87)
 
 You also need to install ToonStore and the BoilerStatus app, you can find information on how to install these on forum mentioned above.
 
@@ -20,7 +20,7 @@ To use this component in your installation, add the following to your `configura
 sensor:
   - platform: toon_boilerstatus
     host: IP_ADDRESS
-    port: 10080
+    port: 80
     scan_interval: 10
     resources:
       - boilersetpoint
@@ -34,8 +34,8 @@ sensor:
 
 Configuration variables:
 
-- **host** (*Required*): The IP address on which the TOON can be reached.
-- **port** (*Optional*): Port used by your TOON. (default = 10080)
+- **host** (*Required*): The IP address on which the Toon can be reached.
+- **port** (*Optional*): Port used by your Toon. (default = 80)
 - **scan_interval** (*Optional*): Number of seconds between polls. (default = 10)
 - **resources** (*Required*): This section tells the component which values to display and monitor.
 
@@ -58,7 +58,7 @@ Boiler Status:
 
 ## Screenshots
 
-![alt text](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/blob/master/screenshots/toon-boilerstatus.png?raw=true "Screenshot TOON Boiler Status")
+![alt text](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/blob/master/screenshots/toon-boilerstatus.png?raw=true "Screenshot Toon Boiler Status")
 
 ## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
