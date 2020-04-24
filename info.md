@@ -4,7 +4,7 @@
 This is a Custom Component for Home-Assistant (https://home-assistant.io) that reads and displays the boiler status values from a rooted Toon thermostat.
 
 NOTE: This component only works with rooted Toon devices.
-TOON thermostats are available in The Netherlands and Belgium.
+Toon thermostats are available in The Netherlands and Belgium.
 
 More information about rooting your Toon can be found here:
 [Eneco Toon as Domotica controller](http://www.domoticaforum.eu/viewforum.php?f=87)
