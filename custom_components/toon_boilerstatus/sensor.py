@@ -7,7 +7,7 @@ configuration.yaml
 sensor:
   - platform: toon_boilerstatus
     host: IP_ADDRESS
-    port: 10080
+    port: 80
     scan_interval: 10
     resources:
       - boilersetpoint
@@ -52,7 +52,7 @@ SENSOR_TYPES = {
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_PORT, default=10800): cv.positive_int,
+    vol.Optional(CONF_PORT, default=80): cv.positive_int,
     vol.Required(CONF_RESOURCES, default=list(SENSOR_TYPES)):
         vol.All(cv.ensure_list, [vol.In(SENSOR_TYPES)]),
 })
@@ -108,8 +108,8 @@ class ToonBoilerStatusData(object):
             _LOGGER.error("Cannot connect to TOON thermostat")
             self._data = None
             return
-        except (Exception):
-            _LOGGER.error("Error downloading from TOON thermostat")
+        except (Exception) as err:
+            _LOGGER.error("Error downloading from TOON thermostat: %s", err)
             self._data = None
             return
 
