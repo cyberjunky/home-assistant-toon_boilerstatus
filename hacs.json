@@ -1,5 +1,5 @@
 {
-  "name": "TOON Boiler Status",
+  "name": "Toon Boiler Status",
   "country": "NL",
   "render_readme": false,
   "domains": ["sensor"],
