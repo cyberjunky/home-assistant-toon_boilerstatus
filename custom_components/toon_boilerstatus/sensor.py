@@ -1,13 +1,13 @@
 """
-Support for reading Opentherm boiler status data using TOON thermostat's ketelmodule.
-Only works for rooted TOON.
+Support for reading Opentherm boiler status data using Toon thermostat's ketelmodule.
+Only works for rooted Toon.
 
 configuration.yaml
 
 sensor:
   - platform: toon_boilerstatus
     host: IP_ADDRESS
-    port: 10080
+    port: 80
     scan_interval: 10
     resources:
       - boilersetpoint
@@ -20,10 +20,13 @@ sensor:
 """
 import logging
 from datetime import timedelta
-import requests
+import aiohttp
+import asyncio
+import async_timeout
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
     CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, CONF_RESOURCES
@@ -36,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
-SENSOR_PREFIX = 'TOON '
+SENSOR_PREFIX = 'Toon '
 SENSOR_TYPES = {
     'boilersetpoint': ['Boiler SetPoint', '°C', 'mdi:thermometer'],
     'boilerintemp': ['Boiler InTemp', '°C', 'mdi:thermometer'],
@@ -49,24 +52,19 @@ SENSOR_TYPES = {
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_PORT, default=10800): cv.positive_int,
+    vol.Optional(CONF_PORT, default=80): cv.positive_int,
     vol.Required(CONF_RESOURCES, default=list(SENSOR_TYPES)):
         vol.All(cv.ensure_list, [vol.In(SENSOR_TYPES)]),
 })
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Setup the TOON boilerstatus sensors."""
+    """Setup the Toon boilerstatus sensors."""
 
-    scan_interval = config.get(CONF_SCAN_INTERVAL)
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
 
-    data = ToonBoilerStatusData(host, port)
-    try:
-        await data.async_update()
-    except ValueError as err:
-        _LOGGER.error("Error while fetching data from TOON: %s", err)
-        return
+    toondata = ToonBoilerStatusData(hass, host, port)
+    await toondata.async_update()
 
     entities = []
     for resource in config[CONF_RESOURCES]:
@@ -75,57 +73,72 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         unit = SENSOR_TYPES[resource][1]
         icon = SENSOR_TYPES[resource][2]
 
-        _LOGGER.debug("Adding TOON Boiler Status sensor: {}, {}, {}, {}".format(sensor_type, name, unit, icon))
-        entities.append(ToonBoilerStatusSensor(data, sensor_type, name, unit, icon))
+        _LOGGER.debug("Adding Toon Boiler Status sensor: {}, {}, {}, {}".format(name, sensor_type, unit, icon))
+        entities.append(ToonBoilerStatusSensor(toondata, name, sensor_type, unit, icon))
 
     async_add_entities(entities, True)
 
 
 # pylint: disable=abstract-method
 class ToonBoilerStatusData(object):
-    """Handle TOON object and limit updates."""
-
-    def __init__(self, host, port):
+    """Handle Toon object and limit updates."""
+    def __init__(self, hass, host, port):
         """Initialize the data object."""
+
+        self._hass = hass
         self._host = host
         self._port = port
+
+        self._url = BASE_URL.format(self._host, self._port)
         self._data = None
 
-    def _build_url(self):
-        """Build the URL for the requests."""
-        url = BASE_URL.format(self._host, self._port)
-        _LOGGER.debug("TOON fetch URL: %s", url)
-        return url
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    async def async_update(self):
+        """Download and update data from Toon."""
+
+        try:
+            websession = async_get_clientsession(self._hass)
+            with async_timeout.timeout(5):
+                response = await websession.get(self._url)
+            _LOGGER.debug(
+                "Response status from Toon: %s", response.status
+            ) 
+        except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+            _LOGGER.error("Cannot connect to Toon: %s", err)
+            self._data = None
+            return
+        except Exception as err:
+            _LOGGER.error("Error downloading from Toon: %s", err)
+            self._data = None
+            return
+
+        try:
+            self._data = await response.json(content_type='text/plain')
+            _LOGGER.debug("Data received from Toon: %s", self._data)
+        except Exception as err:
+            _LOGGER.error("Cannot parse data from Toon: %s", err)
+            self._data = None
+            return
 
     @property
     def latest_data(self):
         """Return the latest data object."""
-        if self._data:
-            return self._data
-        return None
+        return self._data
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self):
-        """Update the data from TOON."""
-        try:
-            self._data = requests.get(self._build_url(), timeout=10, headers={'accept-encoding': None}).json()
-            _LOGGER.debug("TOON fetched data = %s", self._data)
-        except (requests.exceptions.RequestException) as error:
-            _LOGGER.error("Unable to connect to TOON: %s", error)
-            self._data = None
 
 class ToonBoilerStatusSensor(Entity):
-    """Representation of a OpenTherm Boiler connected to TOON."""
+    """Representation of a Toon Boilerstatus sensor."""
 
-    def __init__(self, data, sensor_type, name, unit, icon):
+    def __init__(self, toondata, name, sensor_type, unit, icon):
         """Initialize the sensor."""
-        self._data = data
-        self._type = sensor_type
+        self._toondata = toondata
         self._name = name
+        self._type = sensor_type
         self._unit = unit
         self._icon = icon
 
         self._state = None
+        self._last_updated = None
 
     @property
     def name(self):
@@ -158,50 +171,47 @@ class ToonBoilerStatusSensor(Entity):
     async def async_update(self):
         """Get the latest data and use it to update our sensor state."""
 
-        await self._data.async_update()
-        if not self._data:
-            _LOGGER.error("Didn't receive data from TOON")
-            return
+        await self._toondata.async_update()
+        boilerstatus = self._toondata.latest_data
 
-        boilerstatus = self._data.latest_data
+        if boilerstatus:
+            if 'sampleTime' in boilerstatus:
+              if boilerstatus["sampleTime"] is not None:
+                self._last_updated = boilerstatus["sampleTime"]
 
-        if 'sampleTime' in boilerstatus:
-          if boilerstatus["sampleTime"] is not None:
-            self._last_updated = boilerstatus["sampleTime"]
+            if self._type == 'boilersetpoint':
+              if 'boilerSetpoint' in boilerstatus:
+                if boilerstatus["boilerSetpoint"] is not None:
+                  self._state = float(boilerstatus["boilerSetpoint"])
 
-        if self._type == 'boilersetpoint':
-          if 'boilerSetpoint' in boilerstatus:
-            if boilerstatus["boilerSetpoint"] is not None:
-              self._state = float(boilerstatus["boilerSetpoint"])
+            elif self._type == 'boilerintemp':
+              if 'boilerInTemp' in boilerstatus:
+                if boilerstatus["boilerInTemp"] is not None:
+                  self._state = float(boilerstatus["boilerInTemp"])
 
-        elif self._type == 'boilerintemp':
-          if 'boilerInTemp' in boilerstatus:
-            if boilerstatus["boilerInTemp"] is not None:
-              self._state = float(boilerstatus["boilerInTemp"])
+            elif self._type == 'boilerouttemp':
+              if 'boilerOutTemp' in boilerstatus:
+                if boilerstatus["boilerOutTemp"] is not None:
+                  self._state = float(boilerstatus["boilerOutTemp"])
 
-        elif self._type == 'boilerouttemp':
-          if 'boilerOutTemp' in boilerstatus:
-            if boilerstatus["boilerOutTemp"] is not None:
-              self._state = float(boilerstatus["boilerOutTemp"])
+            elif self._type == 'boilerpressure':
+              if 'boilerPressure' in boilerstatus:
+                if boilerstatus["boilerPressure"] is not None:
+                  self._state = float(boilerstatus["boilerPressure"])
 
-        elif self._type == 'boilerpressure':
-          if 'boilerPressure' in boilerstatus:
-            if boilerstatus["boilerPressure"] is not None:
-              self._state = float(boilerstatus["boilerPressure"])
+            elif self._type == 'boilermodulationlevel':
+              if 'boilerModulationLevel' in boilerstatus:
+                if boilerstatus["boilerModulationLevel"] is not None:
+                  self._state = float(boilerstatus["boilerModulationLevel"])
 
-        elif self._type == 'boilermodulationlevel':
-          if 'boilerModulationLevel' in boilerstatus:
-            if boilerstatus["boilerModulationLevel"] is not None:
-              self._state = float(boilerstatus["boilerModulationLevel"])
+            elif self._type == 'roomtemp':
+              if 'roomTemp' in boilerstatus:
+                if boilerstatus["roomTemp"] is not None:
+                  self._state = float(boilerstatus["roomTemp"])
 
-        elif self._type == 'roomtemp':
-          if 'roomTemp' in boilerstatus:
-            if boilerstatus["roomTemp"] is not None:
-              self._state = float(boilerstatus["roomTemp"])
+            elif self._type == 'roomtempsetpoint':
+              if 'roomTempSetpoint' in boilerstatus:
+                if boilerstatus["roomTempSetpoint"] is not None:
+                  self._state = float(boilerstatus["roomTempSetpoint"])
 
-        elif self._type == 'roomtempsetpoint':
-          if 'roomTempSetpoint' in boilerstatus:
-            if boilerstatus["roomTempSetpoint"] is not None:
-              self._state = float(boilerstatus["roomTempSetpoint"])
-
-        _LOGGER.debug("Device: {} State: {}".format(self._type, self._state))
+            _LOGGER.debug("Device: {} State: {}".format(self._type, self._state))
