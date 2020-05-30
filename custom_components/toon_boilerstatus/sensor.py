@@ -98,10 +98,10 @@ class ToonBoilerStatusData(object):
             _LOGGER.error("Cannot poll Toon using url: %s", self._url)
             return
         except asyncio.TimeoutError:
-            _LOGGER.error("Timeout occured while polling Toon using url: %s", self._url)
+            _LOGGER.error("Timeout error occurred while polling Toon using url: %s", self._url)
             return
         except Exception as err:
-            _LOGGER.error("Unknown error occured while polling Toon: %s", err)
+            _LOGGER.error("Unknown error occurred while polling Toon: %s", err)
             self._data = None
             return
 
@@ -109,7 +109,7 @@ class ToonBoilerStatusData(object):
             self._data = await response.json(content_type='text/plain')
             _LOGGER.debug("Data received from Toon: %s", self._data)
         except Exception as err:
-            _LOGGER.error("Cannot parse data from Toon: %s", err)
+            _LOGGER.error("Cannot parse data received from Toon: %s", err)
             self._data = None
             return
 
