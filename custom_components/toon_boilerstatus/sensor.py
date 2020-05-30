@@ -93,7 +93,7 @@ class ToonBoilerStatusData(object):
 
         try:
             with async_timeout.timeout(5):
-                response = await self._session.get(self._url)
+                response = await self._session.get(self._url, headers={"Accept-Encoding": "identity"})
         except aiohttp.ClientError:
             _LOGGER.error("Cannot poll Toon using url: %s", self._url)
             return
