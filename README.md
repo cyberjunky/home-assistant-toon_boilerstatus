@@ -33,6 +33,7 @@ To use this component in your installation, add the following to your `configura
 
 sensor:
   - platform: toon_boilerstatus
+    name: Toon
     host: IP_ADDRESS
     port: 80
     scan_interval: 10
@@ -48,6 +49,7 @@ sensor:
 
 Configuration variables:
 
+- **name** (*Optional*): Prefix name of the sensors. (default = 'Toon')
 - **host** (*Required*): The IP address on which the Toon can be reached.
 - **port** (*Optional*): Port used by your Toon. (default = 80)
 - **scan_interval** (*Optional*): Number of seconds between polls. (default = 10)
@@ -73,6 +75,17 @@ Boiler Status:
 ## Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/blob/master/screenshots/toon-boilerstatus.png?raw=true "Screenshot Toon Boiler Status")
+
+## Debugging
+
+Add the relevant lines below to the `configuration.yaml`:
+
+```yaml
+logger:
+  default: info
+  logs:
+    homeassistant.components.toon_boilerstatus: debug
+```
 
 ## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
