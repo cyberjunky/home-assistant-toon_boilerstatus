@@ -63,13 +63,13 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     session = async_get_clientsession(hass)
     data = ToonBoilerStatusData(session, config.get(CONF_HOST), config.get(CONF_PORT))
-    name = config.get(CONF_NAME)
+    prefix = config.get(CONF_NAME)
     await data.async_update()
     
     entities = []
     for resource in config[CONF_RESOURCES]:
         sensor_type = resource.lower()
-        name = name + " " + SENSOR_TYPES[resource][0]
+        name = prefix + " " + SENSOR_TYPES[resource][0]
         unit = SENSOR_TYPES[resource][1]
         icon = SENSOR_TYPES[resource][2]
 
