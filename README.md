@@ -84,7 +84,7 @@ Add the relevant lines below to the `configuration.yaml`:
 logger:
   default: info
   logs:
-    homeassistant.components.toon_boilerstatus: debug
+    custom_components.toon_boilerstatus: debug
 ```
 
 ## Donation
