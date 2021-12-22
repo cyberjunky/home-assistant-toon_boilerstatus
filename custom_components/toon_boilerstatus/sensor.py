@@ -27,7 +27,14 @@ import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.sensor import (
+    PLATFORM_SCHEMA,
+    STATE_CLASS_TOTAL_INCREASING,
+    STATE_CLASS_MEASUREMENT,
+    SensorEntity,
+    SensorEntityDescription,
+    )
+
 from homeassistant.const import (
     CONF_NAME, CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, CONF_RESOURCES
     )
@@ -41,13 +48,13 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 DEFAULT_NAME = 'Toon '
 
 SENSOR_TYPES = {
-    'boilersetpoint': ['Boiler SetPoint', '°C', 'mdi:thermometer'],
-    'boilerintemp': ['Boiler InTemp', '°C', 'mdi:thermometer'],
-    'boilerouttemp': ['Boiler OutTemp', '°C', 'mdi:thermometer'],
-    'boilerpressure': ['Boiler Pressure', 'Bar', 'mdi:gauge'],
-    'boilermodulationlevel': ['Boiler Modulation', '%', 'mdi:fire'],
-    'roomtemp': ['Room Temp', '°C', 'mdi:thermometer'],
-    'roomtempsetpoint': ['Room Temp SetPoint', '°C', 'mdi:thermometer'],
+    'boilersetpoint': ['Boiler SetPoint', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
+    'boilerintemp': ['Boiler InTemp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
+    'boilerouttemp': ['Boiler OutTemp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
+    'boilerpressure': ['Boiler Pressure', 'Bar', 'mdi:gauge', STATE_CLASS_MEASUREMENT],
+    'boilermodulationlevel': ['Boiler Modulation', '%', 'mdi:fire', STATE_CLASS_MEASUREMENT],
+    'roomtemp': ['Room Temp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
+    'roomtempsetpoint': ['Room Temp SetPoint', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
 }
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
@@ -72,6 +79,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         name = prefix + " " + SENSOR_TYPES[resource][0]
         unit = SENSOR_TYPES[resource][1]
         icon = SENSOR_TYPES[resource][2]
+        state_class = SENSOR_TYPES[resource][3]
 
         _LOGGER.debug("Adding Toon Boiler Status sensor: {}, {}, {}, {}".format(name, sensor_type, unit, icon))
         entities.append(ToonBoilerStatusSensor(data, name, sensor_type, unit, icon))
