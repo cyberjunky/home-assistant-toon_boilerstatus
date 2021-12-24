@@ -5,65 +5,135 @@ Only works for rooted Toon.
 configuration.yaml
 
 sensor:
-  - platform: toon_boilerstatus
+    - platform: toon_boilerstatus
     host: IP_ADDRESS
     port: 80
     scan_interval: 10
     resources:
-      - boilersetpoint
-      - boilerintemp
-      - boilerouttemp
-      - boilerpressure
-      - boilermodulationlevel
-      - roomtemp
-      - roomtempsetpoint
+        - boilersetpoint
+        - boilerintemp
+        - boilerouttemp
+        - boilerpressure
+        - boilermodulationlevel
+        - roomtemp
+        - roomtempsetpoint
 """
+import asyncio
 import logging
 from datetime import timedelta
-import aiohttp
-import asyncio
-import async_timeout
-import voluptuous as vol
+from typing import Final
 
+import aiohttp
+import async_timeout
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import voluptuous as vol
 from homeassistant.components.sensor import (
+    DEVICE_CLASS_POWER_FACTOR,
+    DEVICE_CLASS_PRESSURE,
+    DEVICE_CLASS_TEMPERATURE,
     PLATFORM_SCHEMA,
-    STATE_CLASS_TOTAL_INCREASING,
     STATE_CLASS_MEASUREMENT,
     SensorEntity,
     SensorEntityDescription,
-    )
-
+)
 from homeassistant.const import (
-    CONF_NAME, CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, CONF_RESOURCES
-    )
-from homeassistant.helpers.entity import Entity
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PORT,
+    CONF_RESOURCES,
+    PERCENTAGE,
+    PRESSURE_BAR,
+    TEMP_CELSIUS,
+)
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import Throttle
 
-BASE_URL = 'http://{0}:{1}/boilerstatus/boilervalues.txt'
+BASE_URL = "http://{0}:{1}/boilerstatus/boilervalues.txt"
 _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
-DEFAULT_NAME = 'Toon '
+DEFAULT_NAME = "Toon "
 
-SENSOR_TYPES = {
-    'boilersetpoint': ['Boiler SetPoint', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
-    'boilerintemp': ['Boiler InTemp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
-    'boilerouttemp': ['Boiler OutTemp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
-    'boilerpressure': ['Boiler Pressure', 'Bar', 'mdi:gauge', STATE_CLASS_MEASUREMENT],
-    'boilermodulationlevel': ['Boiler Modulation', '%', 'mdi:fire', STATE_CLASS_MEASUREMENT],
-    'roomtemp': ['Room Temp', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
-    'roomtempsetpoint': ['Room Temp SetPoint', '°C', 'mdi:thermometer', STATE_CLASS_MEASUREMENT],
+SENSOR_LIST = {
+    "boilersetpoint",
+    "boilerintemp",
+    "boilerouttemp",
+    "boilerpressure",
+    "boilermodulationlevel",
+    "roomtemp",
+    "roomtempsetpoint",
 }
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_PORT, default=80): cv.positive_int,
-    vol.Required(CONF_RESOURCES, default=list(SENSOR_TYPES)):
-        vol.All(cv.ensure_list, [vol.In(SENSOR_TYPES)]),
-})
+SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
+    SensorEntityDescription(
+        key="boilersetpoint",
+        name="Boiler SetPoint",
+        icon="mdi:thermometer",
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="boilerintemp",
+        name="Boiler InTemp",
+        icon="mdi:thermometer",
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="boilerouttemp",
+        name="Boiler OutTemp",
+        icon="mdi:flash",
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="boilerpressure",
+        name="Boiler Pressure",
+        icon="mdi:gauge",
+        native_unit_of_measurement=PRESSURE_BAR,
+        device_class=DEVICE_CLASS_PRESSURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="boilermodulationlevel",
+        name="Boiler Modulation",
+        icon="mdi:fire",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=DEVICE_CLASS_POWER_FACTOR,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="roomtemp",
+        name="Room Temp",
+        icon="mdi:thermometer",
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="roomtempsetpoint",
+        name="Room Temp SetPoint",
+        icon="mdi:thermometer",
+        native_unit_of_measurement=TEMP_CELSIUS,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+)
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Required(CONF_HOST): cv.string,
+        vol.Optional(CONF_PORT, default=80): cv.positive_int,
+        vol.Required(CONF_RESOURCES, default=list(SENSOR_LIST)): vol.All(
+            cv.ensure_list, [vol.In(SENSOR_LIST)]
+        ),
+    }
+)
+
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Setup the Toon boilerstatus sensors."""
@@ -72,24 +142,20 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     data = ToonBoilerStatusData(session, config.get(CONF_HOST), config.get(CONF_PORT))
     prefix = config.get(CONF_NAME)
     await data.async_update()
-    
+
     entities = []
-    for resource in config[CONF_RESOURCES]:
-        sensor_type = resource.lower()
-        name = prefix + " " + SENSOR_TYPES[resource][0]
-        unit = SENSOR_TYPES[resource][1]
-        icon = SENSOR_TYPES[resource][2]
-        state_class = SENSOR_TYPES[resource][3]
-
-        _LOGGER.debug("Adding Toon Boiler Status sensor: {}, {}, {}, {}".format(name, sensor_type, unit, icon))
-        entities.append(ToonBoilerStatusSensor(data, name, sensor_type, unit, icon))
-
+    for description in SENSOR_TYPES:
+        if description.key in config[CONF_RESOURCES]:
+            _LOGGER.debug("Adding Toon Boiler Status sensor: %s", description.name)
+            sensor = ToonBoilerStatusSensor(prefix, description, data)
+            entities.append(sensor)
     async_add_entities(entities, True)
 
 
 # pylint: disable=abstract-method
-class ToonBoilerStatusData(object):
+class ToonBoilerStatusData:
     """Handle Toon object and limit updates."""
+
     def __init__(self, session, host, port):
         """Initialize the data object."""
 
@@ -103,12 +169,16 @@ class ToonBoilerStatusData(object):
 
         try:
             with async_timeout.timeout(5):
-                response = await self._session.get(self._url, headers={"Accept-Encoding": "identity"})
+                response = await self._session.get(
+                    self._url, headers={"Accept-Encoding": "identity"}
+                )
         except aiohttp.ClientError:
             _LOGGER.error("Cannot poll Toon using url: %s", self._url)
             return
         except asyncio.TimeoutError:
-            _LOGGER.error("Timeout error occurred while polling Toon using url: %s", self._url)
+            _LOGGER.error(
+                "Timeout error occurred while polling Toon using url: %s", self._url
+            )
             return
         except Exception as err:
             _LOGGER.error("Unknown error occurred while polling Toon: %s", err)
@@ -116,7 +186,7 @@ class ToonBoilerStatusData(object):
             return
 
         try:
-            self._data = await response.json(content_type='text/plain')
+            self._data = await response.json(content_type="text/plain")
             _LOGGER.debug("Data received from Toon: %s", self._data)
         except Exception as err:
             _LOGGER.error("Cannot parse data received from Toon: %s", err)
@@ -129,29 +199,26 @@ class ToonBoilerStatusData(object):
         return self._data
 
 
-class ToonBoilerStatusSensor(Entity):
+class ToonBoilerStatusSensor(SensorEntity):
     """Representation of a Toon Boilerstatus sensor."""
 
-    def __init__(self, data, name, sensor_type, unit, icon):
+    def __init__(self, prefix, description: SensorEntityDescription, data):
         """Initialize the sensor."""
+        self.entity_description = description
         self._data = data
-        self._name = name
-        self._type = sensor_type
-        self._unit = unit
-        self._icon = icon
+        self._prefix = prefix
+        self._type = self.entity_description.key
+        self._attr_icon = self.entity_description.icon
+        self._attr_name = self._prefix + self.entity_description.name
+        self._attr_state_class = self.entity_description.state_class
+        self._attr_native_unit_of_measurement = (
+            self.entity_description.native_unit_of_measurement
+        )
+        self._attr_device_class = self.entity_description.device_class
+        self._attr_unique_id = f"{self._prefix}_{self._type}"
 
         self._state = None
         self._last_updated = None
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def icon(self):
-        """Icon to use in the frontend, if any."""
-        return self._icon
 
     @property
     def state(self):
@@ -159,16 +226,11 @@ class ToonBoilerStatusSensor(Entity):
         return self._state
 
     @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement of this entity, if any."""
-        return self._unit
-
-    @property
     def extra_state_attributes(self):
         """Return the state attributes of this device."""
         attr = {}
         if self._last_updated is not None:
-            attr['Last Updated'] = self._last_updated
+            attr["Last Updated"] = self._last_updated
         return attr
 
     async def async_update(self):
@@ -178,43 +240,38 @@ class ToonBoilerStatusSensor(Entity):
         boiler = self._data.latest_data
 
         if boiler:
-            if 'sampleTime' in boiler:
-              if boiler["sampleTime"] is not None:
+            if "sampleTime" in boiler and boiler["sampleTime"]:
                 self._last_updated = boiler["sampleTime"]
 
-            if self._type == 'boilersetpoint':
-              if 'boilerSetpoint' in boiler:
-                if boiler["boilerSetpoint"] is not None:
-                  self._state = float(boiler["boilerSetpoint"])
+            if self._type == "boilersetpoint":
+                if "boilerSetpoint" in boiler and boiler["boilerSetpoint"]:
+                    self._state = float(boiler["boilerSetpoint"])
 
-            elif self._type == 'boilerintemp':
-              if 'boilerInTemp' in boiler:
-                if boiler["boilerInTemp"] is not None:
-                  self._state = float(boiler["boilerInTemp"])
+            elif self._type == "boilerintemp":
+                if "boilerInTemp" in boiler and boiler["boilerInTemp"]:
+                    self._state = float(boiler["boilerInTemp"])
 
-            elif self._type == 'boilerouttemp':
-              if 'boilerOutTemp' in boiler:
-                if boiler["boilerOutTemp"] is not None:
-                  self._state = float(boiler["boilerOutTemp"])
+            elif self._type == "boilerouttemp":
+                if "boilerOutTemp" in boiler and boiler["boilerOutTemp"]:
+                    self._state = float(boiler["boilerOutTemp"])
 
-            elif self._type == 'boilerpressure':
-              if 'boilerPressure' in boiler:
-                if boiler["boilerPressure"] is not None:
-                  self._state = float(boiler["boilerPressure"])
+            elif self._type == "boilerpressure":
+                if "boilerPressure" in boiler and boiler["boilerPressure"]:
+                    self._state = float(boiler["boilerPressure"])
 
-            elif self._type == 'boilermodulationlevel':
-              if 'boilerModulationLevel' in boiler:
-                if boiler["boilerModulationLevel"] is not None:
-                  self._state = float(boiler["boilerModulationLevel"])
+            elif self._type == "boilermodulationlevel":
+                if (
+                    "boilerModulationLevel" in boiler
+                    and boiler["boilerModulationLevel"]
+                ):
+                    self._state = float(boiler["boilerModulationLevel"])
 
-            elif self._type == 'roomtemp':
-              if 'roomTemp' in boiler:
-                if boiler["roomTemp"] is not None:
-                  self._state = float(boiler["roomTemp"])
+            elif self._type == "roomtemp":
+                if "roomTemp" in boiler and boiler["roomTemp"]:
+                    self._state = float(boiler["roomTemp"])
 
-            elif self._type == 'roomtempsetpoint':
-              if 'roomTempSetpoint' in boiler:
-                if boiler["roomTempSetpoint"] is not None:
-                  self._state = float(boiler["roomTempSetpoint"])
+            elif self._type == "roomtempsetpoint":
+                if "roomTempSetpoint" in boiler and boiler["roomTempSetpoint"]:
+                    self._state = float(boiler["roomTempSetpoint"])
 
-            _LOGGER.debug("Device: {} State: {}".format(self._type, self._state))
+            _LOGGER.debug("Device: %s State: %s", self._type, self._state)

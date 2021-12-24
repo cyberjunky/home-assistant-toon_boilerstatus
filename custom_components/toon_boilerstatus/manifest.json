@@ -1,7 +1,7 @@
 {
   "domain": "toon_boilerstatus",
-  "name": "TOON Boiler Status",
-  "version": "1.0.9",
+  "name": "Toon Boiler Status",
+  "version": "1.0.11",
   "documentation": "https://github.com/cyberjunky/home-assistant-toon_boilerstatus",
   "issue_tracker": "https://github.com/cyberjunky/home-assistant-toon_boilerstatus/issues",
   "requirements": [],
