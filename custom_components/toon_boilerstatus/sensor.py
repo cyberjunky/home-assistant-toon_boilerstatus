@@ -262,7 +262,7 @@ class ToonBoilerStatusSensor(SensorEntity):
             elif self._type == "boilermodulationlevel":
                 if (
                     "boilerModulationLevel" in boiler
-                    and boiler["boilerModulationLevel"]
+                    and boiler["boilerModulationLevel"] != None
                 ):
                     self._state = float(boiler["boilerModulationLevel"])
 
