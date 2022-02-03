@@ -240,23 +240,23 @@ class ToonBoilerStatusSensor(SensorEntity):
         boiler = self._data.latest_data
 
         if boiler:
-            if "sampleTime" in boiler and boiler["sampleTime"]:
+            if "sampleTime" in boiler and boiler["sampleTime"] is not None:
                 self._last_updated = boiler["sampleTime"]
 
             if self._type == "boilersetpoint":
-                if "boilerSetpoint" in boiler and boiler["boilerSetpoint"]:
+                if "boilerSetpoint" in boiler and boiler["boilerSetpoint"] is not None:
                     self._state = float(boiler["boilerSetpoint"])
 
             elif self._type == "boilerintemp":
-                if "boilerInTemp" in boiler and boiler["boilerInTemp"]:
+                if "boilerInTemp" in boiler and boiler["boilerInTemp"] is not None:
                     self._state = float(boiler["boilerInTemp"])
 
             elif self._type == "boilerouttemp":
-                if "boilerOutTemp" in boiler and boiler["boilerOutTemp"]:
+                if "boilerOutTemp" in boiler and boiler["boilerOutTemp"] is not None:
                     self._state = float(boiler["boilerOutTemp"])
 
             elif self._type == "boilerpressure":
-                if "boilerPressure" in boiler and boiler["boilerPressure"]:
+                if "boilerPressure" in boiler and boiler["boilerPressure"] is not None:
                     self._state = float(boiler["boilerPressure"])
 
             elif self._type == "boilermodulationlevel":
@@ -267,11 +267,14 @@ class ToonBoilerStatusSensor(SensorEntity):
                     self._state = float(boiler["boilerModulationLevel"])
 
             elif self._type == "roomtemp":
-                if "roomTemp" in boiler and boiler["roomTemp"]:
+                if "roomTemp" in boiler and boiler["roomTemp"] is not None:
                     self._state = float(boiler["roomTemp"])
 
             elif self._type == "roomtempsetpoint":
-                if "roomTempSetpoint" in boiler and boiler["roomTempSetpoint"]:
+                if (
+                    "roomTempSetpoint" in boiler
+                    and boiler["roomTempSetpoint"] is not None
+                ):
                     self._state = float(boiler["roomTempSetpoint"])
 
             _LOGGER.debug("Device: %s State: %s", self._type, self._state)
