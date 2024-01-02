@@ -159,42 +159,33 @@ class ToonBoilerStatusData:
 
         self._session = session
         self._url = BASE_URL.format(host, port)
-        self._data = None
+        self.data = None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         """Download and update data from Toon."""
 
         try:
-            with async_timeout.timeout(5):
+            async with async_timeout.timeout(5):
                 response = await self._session.get(
                     self._url, headers={"Accept-Encoding": "identity"}
                 )
+            self.data = await response.json(content_type="text/plain")
+            _LOGGER.debug("Data received from %s: %s", name, self._data)
         except aiohttp.ClientError:
-            _LOGGER.error("Cannot poll Toon using url: %s", self._url)
-            return
+            _LOGGER.error("Cannot connect to Toon using url '%s'", name, self._url)
         except asyncio.TimeoutError:
             _LOGGER.error(
-                "Timeout error occurred while polling Toon using url: %s", self._url
+                "Timeout error occurred while connecting to Toon using url '%s'",
+                self._url
             )
-            return
-        except Exception as err:
-            _LOGGER.error("Unknown error occurred while polling Toon: %s", err)
-            self._data = None
-            return
+        except (TypeError, KeyError) as err:
+            _LOGGER.error(f"Cannot parse data received from Toon: %s", name, err)
 
-        try:
-            self._data = await response.json(content_type="text/plain")
-            _LOGGER.debug("Data received from Toon: %s", self._data)
-        except Exception as err:
-            _LOGGER.error("Cannot parse data received from Toon: %s", err)
-            self._data = None
-            return
-
-    @property
-    def latest_data(self):
-        """Return the latest data object."""
-        return self._data
+    # @property
+    # def latest_data(self):
+    #     """Return the latest data object."""
+    #     return self._data
 
 
 class ToonBoilerStatusSensor(SensorEntity):
@@ -235,7 +226,7 @@ class ToonBoilerStatusSensor(SensorEntity):
         """Get the latest data and use it to update our sensor state."""
 
         await self._data.async_update()
-        boiler = self._data.latest_data
+        boiler = self._data.data
 
         if boiler:
             if "sampleTime" in boiler and boiler["sampleTime"] is not None:
