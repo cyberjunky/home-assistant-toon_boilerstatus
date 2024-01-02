@@ -171,21 +171,16 @@ class ToonBoilerStatusData:
                     self._url, headers={"Accept-Encoding": "identity"}
                 )
             self.data = await response.json(content_type="text/plain")
-            _LOGGER.debug("Data received from %s: %s", name, self._data)
+            _LOGGER.debug("Data received from Toon: %s", self.data)
         except aiohttp.ClientError:
-            _LOGGER.error("Cannot connect to Toon using url '%s'", name, self._url)
+            _LOGGER.error("Cannot connect to Toon using url '%s'", self._url)
         except asyncio.TimeoutError:
             _LOGGER.error(
                 "Timeout error occurred while connecting to Toon using url '%s'",
                 self._url
             )
         except (TypeError, KeyError) as err:
-            _LOGGER.error(f"Cannot parse data received from Toon: %s", name, err)
-
-    # @property
-    # def latest_data(self):
-    #     """Return the latest data object."""
-    #     return self._data
+            _LOGGER.error(f"Cannot parse data received from Toon: %s", err)
 
 
 class ToonBoilerStatusSensor(SensorEntity):
