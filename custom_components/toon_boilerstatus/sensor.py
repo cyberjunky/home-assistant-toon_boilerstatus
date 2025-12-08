@@ -5,19 +5,20 @@ Only works for rooted Toon.
 configuration.yaml
 
 sensor:
-    - platform: toon_boilerstatus
+  - platform: toon_boilerstatus
     host: IP_ADDRESS
     port: 80
     scan_interval: 10
     resources:
-        - boilersetpoint
-        - boilerintemp
-        - boilerouttemp
-        - boilerpressure
-        - boilermodulationlevel
-        - roomtemp
-        - roomtempsetpoint
+      - boilersetpoint
+      - boilerintemp
+      - boilerouttemp
+      - boilerpressure
+      - boilermodulationlevel
+      - roomtemp
+      - roomtempsetpoint
 """
+
 import asyncio
 import logging
 from datetime import timedelta
@@ -34,6 +35,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
 )
+
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -82,7 +84,7 @@ SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
     SensorEntityDescription(
         key="boilerouttemp",
         name="Boiler OutTemp",
-        icon="mdi:flash",
+        icon="mdi:thermometer",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -159,7 +161,7 @@ class ToonBoilerStatusData:
 
         self._session = session
         self._url = BASE_URL.format(host, port)
-        self.data = None
+        self._data = None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -170,17 +172,19 @@ class ToonBoilerStatusData:
                 response = await self._session.get(
                     self._url, headers={"Accept-Encoding": "identity"}
                 )
-            self.data = await response.json(content_type="text/plain")
-            _LOGGER.debug("Data received from Toon: %s", self.data)
-        except aiohttp.ClientError:
-            _LOGGER.error("Cannot connect to Toon using url '%s'", self._url)
-        except asyncio.TimeoutError:
-            _LOGGER.error(
-                "Timeout error occurred while connecting to Toon using url '%s'",
-                self._url
-            )
-        except (TypeError, KeyError) as err:
-            _LOGGER.error(f"Cannot parse data received from Toon: %s", err)
+                self._data = await response.json(content_type="text/plain")
+                _LOGGER.debug("Data received from Toon: %s", self._data)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            _LOGGER.error("Cannot poll Toon using url: %s - %s", self._url, err)
+            self._data = None
+        except Exception as err:
+            _LOGGER.error("Unknown error occurred while polling Toon: %s", err)
+            self._data = None
+
+    @property
+    def latest_data(self):
+        """Return the latest data object."""
+        return self._data
 
 
 class ToonBoilerStatusSensor(SensorEntity):
@@ -193,7 +197,7 @@ class ToonBoilerStatusSensor(SensorEntity):
         self._prefix = prefix
         self._type = self.entity_description.key
         self._attr_icon = self.entity_description.icon
-        self._attr_name = self._prefix + self.entity_description.name
+        self._attr_name = f"{self._prefix}{self.entity_description.name}"
         self._attr_state_class = self.entity_description.state_class
         self._attr_native_unit_of_measurement = (
             self.entity_description.native_unit_of_measurement
@@ -221,44 +225,24 @@ class ToonBoilerStatusSensor(SensorEntity):
         """Get the latest data and use it to update our sensor state."""
 
         await self._data.async_update()
-        boiler = self._data.data
+        boiler = self._data.latest_data
 
         if boiler:
             if "sampleTime" in boiler and boiler["sampleTime"] is not None:
                 self._last_updated = boiler["sampleTime"]
 
-            if self._type == "boilersetpoint":
-                if "boilerSetpoint" in boiler and boiler["boilerSetpoint"] is not None:
-                    self._state = float(boiler["boilerSetpoint"])
+            mapping = {
+                "boilersetpoint": "boilerSetpoint",
+                "boilerintemp": "boilerInTemp",
+                "boilerouttemp": "boilerOutTemp",
+                "boilerpressure": "boilerPressure",
+                "boilermodulationlevel": "boilerModulationLevel",
+                "roomtemp": "roomTemp",
+                "roomtempsetpoint": "roomTempSetpoint",
+            }
 
-            elif self._type == "boilerintemp":
-                if "boilerInTemp" in boiler and boiler["boilerInTemp"] is not None:
-                    self._state = float(boiler["boilerInTemp"])
-
-            elif self._type == "boilerouttemp":
-                if "boilerOutTemp" in boiler and boiler["boilerOutTemp"] is not None:
-                    self._state = float(boiler["boilerOutTemp"])
-
-            elif self._type == "boilerpressure":
-                if "boilerPressure" in boiler and boiler["boilerPressure"] is not None:
-                    self._state = float(boiler["boilerPressure"])
-
-            elif self._type == "boilermodulationlevel":
-                if (
-                    "boilerModulationLevel" in boiler
-                    and boiler["boilerModulationLevel"] is not None
-                ):
-                    self._state = float(boiler["boilerModulationLevel"])
-
-            elif self._type == "roomtemp":
-                if "roomTemp" in boiler and boiler["roomTemp"] is not None:
-                    self._state = float(boiler["roomTemp"])
-
-            elif self._type == "roomtempsetpoint":
-                if (
-                    "roomTempSetpoint" in boiler
-                    and boiler["roomTempSetpoint"] is not None
-                ):
-                    self._state = float(boiler["roomTempSetpoint"])
+            key = mapping.get(self._type)
+            if key and key in boiler and boiler[key] is not None:
+                self._state = float(boiler[key])
 
             _LOGGER.debug("Device: %s State: %s", self._type, self._state)
