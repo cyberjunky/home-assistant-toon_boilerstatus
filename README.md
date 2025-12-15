@@ -59,9 +59,22 @@ By default the values are displayed as badges.
 
 If you want them grouped instead of having the separate sensor badges, you can use these entries in your `groups.yaml`:
 
+# Template examples
+
 ```yaml
+template:
+  - sensor:
+    - unique_id: driewegklep
+      default_entity_id: sensor.cv_driewegklep
+      name: Driewegklep
+      state: "{% if is_state_attr('climate.toon','burner_info', 0) %}\n    Neutraal\n{%
+        elif is_state_attr('climate.toon','burner_info', 1) %}\n    CV\n{% elif is_state_attr('climate.toon','burner_info',
+        2) %}\n    Warm Water\n{% endif %}"
+```
+
 # Example groups.yaml entry
 
+```yaml
 Boiler Status:
   - sensor.toon_boiler_intemp
   - sensor.toon_boiler_outtemp
