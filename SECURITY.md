@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in this integration, please report it privately by creating a [security advisory](https://github.com/cyberjunky/home-assistant-toon_boilerstatus/security/advisories) on GitHub.
+If you discover a security vulnerability in this integration, please report it privately by creating a [security advisory](https://github.com/cyberjunky/home-assistant-omnik_inverter/security/advisories) on GitHub.
 
 **Please do NOT open a public issue for security vulnerabilities.** This allows us to address the issue before it becomes public knowledge.
 

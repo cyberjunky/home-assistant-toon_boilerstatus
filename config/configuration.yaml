@@ -9,4 +9,4 @@ homeassistant:
 logger:
   default: info
   logs:
-    custom_components.toon_boilerstatus: debug
+    custom_components.omnik_inverter: debug

@@ -1,5 +1,5 @@
 {
-  "name": "Toon Boiler Status Integration",
+  "name": "Omnik Inverter Integration",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.13",
   "postCreateCommand": "scripts/setup",
   "forwardPorts": [

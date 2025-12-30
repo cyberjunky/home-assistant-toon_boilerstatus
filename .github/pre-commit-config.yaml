@@ -10,7 +10,7 @@ repos:
         args:
           - --quiet-level=2
           - --ignore-words-list=hass,ba,fo
-          - --skip=tests/fixtures/*,custom_components/toon_boilerstatus/translations/*
+          - --skip=tests/fixtures/*,custom_components/omnik_inverter/translations/*
 
       # isort hook removed to avoid conflicts with ruff formatting
 
