@@ -24,6 +24,10 @@ Monitor your heating system with these sensors:
 
 All sensors are created by default and grouped under a single device for easy management.
 
+## Screenshots
+
+![Toon Boiler Status Integration](screenshots/toon-boilerstatus.png)
+
 ## Requirements
 
 - **Rooted Toon thermostat** (available in the Netherlands and Belgium)
