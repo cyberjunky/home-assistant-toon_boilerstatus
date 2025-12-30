@@ -146,7 +146,7 @@ Alternatively, enable debug logging via the UI in **Settings** → **Devices & S
 
 ![Enable Debug Logging](screenshots/enabledebug.png)
 
-Restart Home Assistant and check **Settings** → **System** → **Logs** for detailed information.
+Then perform any steps to reproduce the issue and disable debug logging again. It will download the relevant log file automatically.
 
 ### Common Issues
 
