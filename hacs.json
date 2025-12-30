@@ -1,5 +1,7 @@
 {
   "name": "Toon Boiler Status",
-  "render_readme": false,
-  "domains": ["sensor"]
+  "country": "NL",
+  "render_readme": true,
+  "homeassistant": "2025.2.4",
+  "hacs": "2.0.5"
 }

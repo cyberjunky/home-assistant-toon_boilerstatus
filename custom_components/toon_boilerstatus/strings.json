@@ -1,0 +1,72 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configure Toon Boiler Status",
+                "description": "Enter the connection details for your rooted Toon thermostat.",
+                "data": {
+                    "host": "Host",
+                    "port": "Port",
+                    "name": "Name",
+                    "scan_interval": "Update Interval (seconds)"
+                },
+                "data_description": {
+                    "host": "IP address of your rooted Toon device",
+                    "port": "Port number (default: 80, alternatives: 10080, 7080)",
+                    "name": "Display name for the boiler status",
+                    "scan_interval": "Update interval in seconds (default: 10)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to Toon. Please check the IP address and port.",
+            "invalid_data": "Invalid data received from Toon. Please ensure BoilerStatus app is installed.",
+            "unknown": "Unexpected error occurred."
+        },
+        "abort": {
+            "already_configured": "This Toon device is already configured.",
+            "cannot_connect": "Failed to connect during YAML import."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configure Toon Boiler Status Options",
+                "description": "Modify the settings for your Toon Boiler Status integration.",
+                "data": {
+                    "name": "Name",
+                    "scan_interval": "Update interval (seconds)"
+                },
+                "data_description": {
+                    "name": "Display name for the boiler status",
+                    "scan_interval": "Update interval in seconds (default: 10)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "boilersetpoint": {
+                "name": "Setpoint"
+            },
+            "boilerintemp": {
+                "name": "In temp"
+            },
+            "boilerouttemp": {
+                "name": "Out temp"
+            },
+            "boilerpressure": {
+                "name": "Pressure"
+            },
+            "boilermodulationlevel": {
+                "name": "Modulation"
+            },
+            "roomtemp": {
+                "name": "Room temp"
+            },
+            "roomtempsetpoint": {
+                "name": "Room temp setpoint"
+            }
+        }
+    }
+}

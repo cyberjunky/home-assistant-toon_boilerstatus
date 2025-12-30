@@ -1,264 +1,128 @@
-"""
-Support for reading Opentherm boiler status data using Toon thermostat's ketelmodule.
-Only works for rooted Toon.
+"""Support for reading Opentherm boiler status data using Toon thermostat's ketelmodule."""
 
-configuration.yaml
+from __future__ import annotations
 
-sensor:
-    - platform: toon_boilerstatus
-    host: IP_ADDRESS
-    port: 80
-    scan_interval: 10
-    resources:
-        - boilersetpoint
-        - boilerintemp
-        - boilerouttemp
-        - boilerpressure
-        - boilermodulationlevel
-        - roomtemp
-        - roomtempsetpoint
-"""
-import asyncio
 import logging
-from datetime import timedelta
-from typing import Final
+from typing import Any
 
-import aiohttp
-import async_timeout
-import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
-    SensorStateClass,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-)
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_NAME,
-    CONF_PORT,
-    CONF_RESOURCES,
-    PERCENTAGE,
-    UnitOfPressure,
-    UnitOfTemperature,
-)
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import Throttle
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-BASE_URL = "http://{0}:{1}/boilerstatus/boilervalues.txt"
+from .const import (
+    DEFAULT_NAME,
+    DOMAIN,
+    SENSOR_MAP,
+)
+from .coordinator import ToonBoilerStatusCoordinator
+
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
-DEFAULT_NAME = "Toon "
-
-SENSOR_LIST = {
-    "boilersetpoint",
-    "boilerintemp",
-    "boilerouttemp",
-    "boilerpressure",
-    "boilermodulationlevel",
-    "roomtemp",
-    "roomtempsetpoint",
+# Mapping from API response keys to our sensor keys
+API_KEY_MAP = {
+    "boilersetpoint": "boilerSetpoint",
+    "boilerintemp": "boilerInTemp",
+    "boilerouttemp": "boilerOutTemp",
+    "boilerpressure": "boilerPressure",
+    "boilermodulationlevel": "boilerModulationLevel",
+    "roomtemp": "roomTemp",
+    "roomtempsetpoint": "roomTempSetpoint",
 }
 
-SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
-    SensorEntityDescription(
-        key="boilersetpoint",
-        name="Boiler SetPoint",
-        icon="mdi:thermometer",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="boilerintemp",
-        name="Boiler InTemp",
-        icon="mdi:thermometer",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="boilerouttemp",
-        name="Boiler OutTemp",
-        icon="mdi:flash",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="boilerpressure",
-        name="Boiler Pressure",
-        icon="mdi:gauge",
-        native_unit_of_measurement=UnitOfPressure.BAR,
-        device_class=SensorDeviceClass.PRESSURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="boilermodulationlevel",
-        name="Boiler Modulation",
-        icon="mdi:fire",
-        native_unit_of_measurement=PERCENTAGE,
-        device_class=SensorDeviceClass.BATTERY,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="roomtemp",
-        name="Room Temp",
-        icon="mdi:thermometer",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="roomtempsetpoint",
-        name="Room Temp SetPoint",
-        icon="mdi:thermometer",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Required(CONF_HOST): cv.string,
-        vol.Optional(CONF_PORT, default=80): cv.positive_int,
-        vol.Required(CONF_RESOURCES, default=list(SENSOR_LIST)): vol.All(
-            cv.ensure_list, [vol.In(SENSOR_LIST)]
-        ),
-    }
-)
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Toon Boiler Status sensors from a config entry."""
+    coordinator: ToonBoilerStatusCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Setup the Toon boilerstatus sensors."""
-
-    session = async_get_clientsession(hass)
-    data = ToonBoilerStatusData(session, config.get(CONF_HOST), config.get(CONF_PORT))
-    prefix = config.get(CONF_NAME)
-    await data.async_update()
-
+    # Create all available sensor entities
     entities = []
-    for description in SENSOR_TYPES:
-        if description.key in config[CONF_RESOURCES]:
-            _LOGGER.debug("Adding Toon Boiler Status sensor: %s", description.name)
-            sensor = ToonBoilerStatusSensor(prefix, description, data)
-            entities.append(sensor)
-    async_add_entities(entities, True)
+    for description in SENSOR_MAP.values():
+        entities.append(
+            ToonBoilerStatusSensor(
+                coordinator=coordinator,
+                description=description,
+                entry=entry,
+            )
+        )
+        _LOGGER.debug("Adding Toon Boiler Status sensor: %s", description.name)
+
+    async_add_entities(entities)
 
 
-# pylint: disable=abstract-method
-class ToonBoilerStatusData:
-    """Handle Toon object and limit updates."""
+class ToonBoilerStatusSensor(CoordinatorEntity[ToonBoilerStatusCoordinator], SensorEntity):
+    """Representation of a Toon Boiler Status sensor."""
 
-    def __init__(self, session, host, port):
-        """Initialize the data object."""
+    def __init__(
+        self,
+        coordinator: ToonBoilerStatusCoordinator,
+        description: SensorEntityDescription,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
 
-        self._session = session
-        self._url = BASE_URL.format(host, port)
-        self.data = None
+        self.entity_description = description
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self):
-        """Download and update data from Toon."""
+        # Get device name from options (with fallback to data for migration)
+        device_name = entry.options.get(CONF_NAME) or entry.data.get(CONF_NAME, DEFAULT_NAME)
+
+        # Store for name property
+        self._device_name = device_name
+
+        # Set device info for grouping
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=f"{device_name} Boilerstatus",
+            manufacturer="Eneco",
+            model="Toon Thermostat",
+            configuration_url=f"http://{coordinator.host}:{coordinator.port}",
+        )
+
+        # Set the entity name with device prefix (e.g., "Toon Boiler Modulation")
+        self._attr_name = f"{device_name} {description.name}"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        if not self.coordinator.data:
+            return None
+
+        # Map our sensor key to the API response key
+        api_key = API_KEY_MAP.get(self.entity_description.key)
+        if not api_key:
+            return None
+
+        # Get the value from coordinator data
+        value = self.coordinator.data.get(api_key)
+        if value is None:
+            return None
 
         try:
-            async with async_timeout.timeout(5):
-                response = await self._session.get(
-                    self._url, headers={"Accept-Encoding": "identity"}
-                )
-            self.data = await response.json(content_type="text/plain")
-            _LOGGER.debug("Data received from Toon: %s", self.data)
-        except aiohttp.ClientError:
-            _LOGGER.error("Cannot connect to Toon using url '%s'", self._url)
-        except asyncio.TimeoutError:
-            _LOGGER.error(
-                "Timeout error occurred while connecting to Toon using url '%s'",
-                self._url
+            return float(value)
+        except (ValueError, TypeError):
+            _LOGGER.warning(
+                "Invalid value for %s: %s",
+                self.entity_description.key,
+                value,
             )
-        except (TypeError, KeyError) as err:
-            _LOGGER.error(f"Cannot parse data received from Toon: %s", err)
-
-
-class ToonBoilerStatusSensor(SensorEntity):
-    """Representation of a Toon Boilerstatus sensor."""
-
-    def __init__(self, prefix, description: SensorEntityDescription, data):
-        """Initialize the sensor."""
-        self.entity_description = description
-        self._data = data
-        self._prefix = prefix
-        self._type = self.entity_description.key
-        self._attr_icon = self.entity_description.icon
-        self._attr_name = self._prefix + self.entity_description.name
-        self._attr_state_class = self.entity_description.state_class
-        self._attr_native_unit_of_measurement = (
-            self.entity_description.native_unit_of_measurement
-        )
-        self._attr_device_class = self.entity_description.device_class
-        self._attr_unique_id = f"{self._prefix}_{self._type}"
-
-        self._state = None
-        self._last_updated = None
+            return None
 
     @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attributes = {}
 
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes of this device."""
-        attr = {}
-        if self._last_updated is not None:
-            attr["Last Updated"] = self._last_updated
-        return attr
+        if self.coordinator.data and "sampleTime" in self.coordinator.data:
+            attributes["last_updated"] = self.coordinator.data["sampleTime"]
 
-    async def async_update(self):
-        """Get the latest data and use it to update our sensor state."""
-
-        await self._data.async_update()
-        boiler = self._data.data
-
-        if boiler:
-            if "sampleTime" in boiler and boiler["sampleTime"] is not None:
-                self._last_updated = boiler["sampleTime"]
-
-            if self._type == "boilersetpoint":
-                if "boilerSetpoint" in boiler and boiler["boilerSetpoint"] is not None:
-                    self._state = float(boiler["boilerSetpoint"])
-
-            elif self._type == "boilerintemp":
-                if "boilerInTemp" in boiler and boiler["boilerInTemp"] is not None:
-                    self._state = float(boiler["boilerInTemp"])
-
-            elif self._type == "boilerouttemp":
-                if "boilerOutTemp" in boiler and boiler["boilerOutTemp"] is not None:
-                    self._state = float(boiler["boilerOutTemp"])
-
-            elif self._type == "boilerpressure":
-                if "boilerPressure" in boiler and boiler["boilerPressure"] is not None:
-                    self._state = float(boiler["boilerPressure"])
-
-            elif self._type == "boilermodulationlevel":
-                if (
-                    "boilerModulationLevel" in boiler
-                    and boiler["boilerModulationLevel"] is not None
-                ):
-                    self._state = float(boiler["boilerModulationLevel"])
-
-            elif self._type == "roomtemp":
-                if "roomTemp" in boiler and boiler["roomTemp"] is not None:
-                    self._state = float(boiler["roomTemp"])
-
-            elif self._type == "roomtempsetpoint":
-                if (
-                    "roomTempSetpoint" in boiler
-                    and boiler["roomTempSetpoint"] is not None
-                ):
-                    self._state = float(boiler["roomTempSetpoint"])
-
-            _LOGGER.debug("Device: %s State: %s", self._type, self._state)
+        return attributes
