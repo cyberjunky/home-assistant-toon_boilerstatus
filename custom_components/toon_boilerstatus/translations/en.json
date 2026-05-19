@@ -34,10 +34,14 @@
                 "title": "Configure Toon Boiler Status Options",
                 "description": "Modify the settings for your Toon Boiler Status integration.",
                 "data": {
+                    "host": "Host",
+                    "port": "Port",
                     "name": "Name",
                     "scan_interval": "Update interval (seconds)"
                 },
                 "data_description": {
+                    "host": "IP address of your rooted Toon device",
+                    "port": "Port number (default: 80, alternatives: 10080, 7080)",
                     "name": "Display name for the boiler status",
                     "scan_interval": "Update interval in seconds (default: 10)"
                 }
