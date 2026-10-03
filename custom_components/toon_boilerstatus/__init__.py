@@ -51,64 +51,51 @@ CONFIG_SCHEMA = vol.Schema(
 
 
 async def async_migrate_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Migrate old entities to new unique_id format.
+    """Migrate pre-2.0 entities to the current unique_id format.
 
-    Old integration used entity_id like 'sensor.toon_boilersetpoint'
-    with unique_id format 'sensor_{name}_{host}_{sensor_key}'.
-    New format uses unique_id '{entry_id}_{sensor_key}'.
+    Pre-2.0 releases built the unique_id from the YAML name and the sensor key,
+    e.g. unique_id="Toon _boilersetpoint" for the default name "Toon ".
+    Renaming the unique_id lets the entity registry reuse the existing
+    entity_id, so history and long-term statistics are kept.
     """
     entity_registry = er.async_get(hass)
-
-    # Get values from the entry
     host = entry.data.get(CONF_HOST)
-    name = entry.data.get(CONF_NAME, DEFAULT_NAME)
-
-    # Check if we need to migrate
+    name = entry.options.get(CONF_NAME) or entry.data.get(CONF_NAME, DEFAULT_NAME)
+    # The old default name had a trailing space, which YAML strips unless quoted
+    legacy_prefixes = dict.fromkeys((name, f"{name} ", "Toon ", "Toon"))
     migrated_count = 0
 
     for sensor_key in SENSOR_KEYS:
         new_unique_id = f"{entry.entry_id}_{sensor_key}"
 
-        # Check if entity with new unique_id already exists
+        # Already migrated / already on the new scheme.
         if entity_registry.async_get_entity_id("sensor", DOMAIN, new_unique_id):
             continue
 
-        # Possible old unique_id formats
-        old_unique_ids = [
-            f"sensor_{name}_{host}_{sensor_key}",
-            f"sensor_{DEFAULT_NAME}_{host}_{sensor_key}",
-            f"sensor_Toon_{host}_{sensor_key}",
-        ]
-
-        # Try to find by old unique_id patterns
-        for old_unique_id in old_unique_ids:
+        for prefix in legacy_prefixes:
+            old_unique_id = f"{prefix}_{sensor_key}"
             entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
-
-            # Also check if it was registered without platform
             if not entity_id:
-                for ent in entity_registry.entities.values():
-                    if ent.domain == "sensor" and ent.unique_id == old_unique_id:
-                        entity_id = ent.entity_id
-                        break
+                continue
 
-            if entity_id:
-                _LOGGER.info(
-                    "Migrating entity %s from old unique_id '%s' to '%s'",
-                    entity_id,
-                    old_unique_id,
-                    new_unique_id,
-                )
-                entity_registry.async_update_entity(
-                    entity_id,
-                    new_unique_id=new_unique_id,
-                )
-                migrated_count += 1
-                break
+            _LOGGER.info(
+                "Migrating entity %s from legacy unique_id '%s' to '%s'",
+                entity_id,
+                old_unique_id,
+                new_unique_id,
+            )
+            entity_registry.async_update_entity(
+                entity_id,
+                new_unique_id=new_unique_id,
+                config_entry_id=entry.entry_id,
+            )
+            migrated_count += 1
+            break
 
     if migrated_count > 0:
         _LOGGER.info("Migrated %s entities for host %s", migrated_count, host)
     else:
-        _LOGGER.debug("No old entities found to migrate for host %s", host)
+        _LOGGER.debug("No legacy entities found to migrate for host %s", host)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
