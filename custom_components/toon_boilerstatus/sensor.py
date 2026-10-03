@@ -60,6 +60,8 @@ async def async_setup_entry(
 class ToonBoilerStatusSensor(CoordinatorEntity[ToonBoilerStatusCoordinator], SensorEntity):
     """Representation of a Toon Boiler Status sensor."""
 
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         coordinator: ToonBoilerStatusCoordinator,
@@ -76,9 +78,6 @@ class ToonBoilerStatusSensor(CoordinatorEntity[ToonBoilerStatusCoordinator], Sen
         # Get device name from options (with fallback to data for migration)
         device_name = entry.options.get(CONF_NAME) or entry.data.get(CONF_NAME, DEFAULT_NAME)
 
-        # Store for name property
-        self._device_name = device_name
-
         # Set device info for grouping
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
@@ -87,9 +86,6 @@ class ToonBoilerStatusSensor(CoordinatorEntity[ToonBoilerStatusCoordinator], Sen
             model="Toon Thermostat",
             configuration_url=f"http://{coordinator.host}:{coordinator.port}",
         )
-
-        # Set the entity name with device prefix (e.g., "Toon Boiler Modulation")
-        self._attr_name = f"{device_name} {description.name}"
 
     @property
     def native_value(self) -> float | None:

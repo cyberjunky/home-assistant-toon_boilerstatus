@@ -14,15 +14,17 @@ A Home Assistant custom integration that monitors OpenTherm boiler data through 
 
 Monitor your heating system with these sensors:
 
-- **Toon Boiler SetPoint** - Target water temperature
-- **Toon Boiler InTemp** - Return water temperature  
-- **Toon Boiler OutTemp** - Supply water temperature
-- **Toon Boiler Pressure** - System pressure in bar
-- **Toon Boiler Modulation** - Current modulation level
-- **Toon Room Temp** - Current room temperature
-- **Toon Room Temp SetPoint** - Target room temperature
+- **Boiler SetPoint** - Target water temperature
+- **Boiler InTemp** - Return water temperature  
+- **Boiler OutTemp** - Supply water temperature
+- **Boiler Pressure** - System pressure in bar
+- **Boiler Modulation** - Current modulation level
+- **Room Temp** - Current room temperature
+- **Room Temp SetPoint** - Target room temperature
 
 All sensors are created by default and grouped under a single device for easy management.
+
+Sensor names are prefixed with the device name, for example `Toon Boilerstatus Boiler Pressure` (`sensor.toon_boilerstatus_boiler_pressure`). Existing installations keep their current entity IDs, such as `sensor.toon_boiler_pressure`.
 
 ## Screenshots
 
@@ -126,12 +128,12 @@ automation:
   - alias: "Alert Low Boiler Pressure"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.toon_boiler_pressure
+        entity_id: sensor.toon_boilerstatus_boiler_pressure
         below: 1.0
     action:
       - service: notify.mobile_app
         data:
-          message: "Warning: Boiler pressure is low ({{ states('sensor.toon_boiler_pressure') }} bar)"
+          message: "Warning: Boiler pressure is low ({{ states('sensor.toon_boilerstatus_boiler_pressure') }} bar)"
 ```
 
 ## Troubleshooting
