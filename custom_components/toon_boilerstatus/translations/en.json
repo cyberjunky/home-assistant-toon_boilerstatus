@@ -25,14 +25,15 @@
         },
         "abort": {
             "already_configured": "This Toon device is already configured.",
-            "cannot_connect": "Failed to connect during YAML import."
+            "cannot_connect": "Failed to connect during YAML import.",
+            "invalid_import": "Invalid YAML configuration for import."
         }
     },
     "options": {
         "step": {
             "init": {
                 "title": "Configure Toon Boiler Status Options",
-                "description": "Modify the settings for your Toon Boiler Status integration.",
+                "description": "Modify the settings for your Toon Boiler Status integration. You can also change the IP address and port if your Toon has moved to a different network address.",
                 "data": {
                     "host": "Host",
                     "port": "Port",
@@ -46,6 +47,12 @@
                     "scan_interval": "Update interval in seconds (default: 10)"
                 }
             }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to Toon. Please check the IP address and port.",
+            "invalid_data": "Invalid data received from Toon. Please ensure BoilerStatus app is installed.",
+            "unknown": "Unexpected error occurred.",
+            "already_configured": "Another Toon device is already configured with this host."
         }
     },
     "entity": {

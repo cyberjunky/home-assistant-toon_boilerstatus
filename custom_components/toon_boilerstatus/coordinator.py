@@ -1,11 +1,11 @@
 """Data coordinator for Toon Boiler Status integration."""
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
 
 import aiohttp
-import async_timeout
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -41,7 +41,7 @@ class ToonBoilerStatusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Toon device."""
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 response = await self._session.get(
                     self._url, headers={"Accept-Encoding": "identity"}
                 )
