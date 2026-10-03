@@ -109,7 +109,7 @@ class ToonBoilerStatusSensor(CoordinatorEntity[ToonBoilerStatusCoordinator], Sen
 
         try:
             return float(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             _LOGGER.warning(
                 "Invalid value for %s: %s",
                 self.entity_description.key,
